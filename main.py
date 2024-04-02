@@ -4,11 +4,11 @@ import torch.optim as optim
 import argparse
 from torchinfo import summary
 
-from multimodel import MultiModel
-from compressmodel import CompressModel
-from attentionmodel import AttentionModel
-from dataloader import ChDataModule
-from train import train_epoch, eval_epoch, train_loop
+from code.models.multimodal import MultimodalModel
+from code.models.compressor import CompressorModel
+from code.models.attention import AttentionModel
+from code.dataloader import ChDataModule
+from code.train import train_epoch, eval_epoch, train_loop
 
 
 if __name__ == "__main__":
@@ -41,40 +41,16 @@ if __name__ == "__main__":
 	datamodule = ChDataModule(args.datamodule_cfg, args.dataloader_cfg)
 	datamodule.setup()
 
-	if args.model == "multimodel":
-		model = MultiModel(
-			pretrain=args.pretrain,
-			use_hrv=args.use_hrv,
-			use_weather=args.use_weather,
-			use_metadata=args.use_metadata,
-			use_pv=args.use_pv,
-			dropout=args.dropout,
-			batchnorm=args.batchnorm
-		)
+	if args.model == "multimodal":
+		model = MultimodalModel(args)
 		summary(model)
 
-	elif args.model == "compressmodel":
-		model = CompressModel(
-			pretrain=args.pretrain,
-			use_hrv=args.use_hrv,
-			use_weather=args.use_weather,
-			use_metadata=args.use_metadata,
-			use_pv=args.use_pv,
-			dropout=args.dropout,
-			batchnorm=args.batchnorm
-		)
+	elif args.model == "compressor":
+		model = CompressorModel(args)
 		summary(model)
 
-	elif args.model == "attentionmodel":
-		model = AttentionModel(
-			pretrain=args.pretrain,
-			use_hrv=args.use_hrv,
-			use_weather=args.use_weather,
-			use_metadata=args.use_metadata,
-			use_pv=args.use_pv,
-			dropout=args.dropout,
-			batchnorm=args.batchnorm
-		)
+	elif args.model == "attention":
+		model = AttentionModel(args)
 		summary(model)
 
 	else:
