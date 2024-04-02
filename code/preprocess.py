@@ -84,7 +84,7 @@ if __name__ == "__main__":
 
     for year in [2020, 2021]:
         for month in range(1, 13):
-            if not os.path.exists("data/satellite-hrv/{year}/{month}"):
+            if not os.path.exists(f"data/satellite-hrv/{year}/{month}"):
                 hrv_data_month = xr.open_dataset(
                     f"data/satellite-hrv/{year}/{month}.zarr.zip",
                     engine="zarr", chunks="auto"
