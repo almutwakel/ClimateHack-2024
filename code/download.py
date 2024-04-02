@@ -83,39 +83,40 @@ if __name__ == "__main__":
 
     for year in [2020, 2021]:
         for month in range(1, 13):
-            hrv_data_month = xr.open_dataset(
-                f"data/satellite-hrv/{year}/{month}.zarr.zip",
-                engine="zarr", chunks="auto"
-            )
-            start_date = datetime(year, month, 1)
-            end_date = start_date + relativedelta(months=1)
-
-            cur = start_date
-            days_to_get = []
-            while cur != end_date + timedelta(days=1):
-                days_to_get.append(cur)
-                cur = cur + timedelta(days=1)
-
-            for date in tqdm.tqdm(days_to_get):
-                slc = get_day_slice(date, hrv_data_month)
-                if slc is None:
-                    continue
-                combined = xr.concat([slc], dim='time')
-                times = combined['time'].to_numpy()
-                data = combined['data'].to_numpy()
-                day = date.day
-                pathlib.Path(f"data/satellite-hrv/{year}/{month}").mkdir(parents=False, exist_ok=True)
-                p = pathlib.Path(f'data/satellite-hrv/{year}/{month}/{day}.npz')
-                if p.exists():
-                    raise ValueError(f'Path {p} already exists!')
-                print('Saving', p)
-                np.savez(
-                    p,
-                    times=times,
-                    data=data,
+            if not os.path.exists("data/satellite-hrv/{year}/{month}"):
+                hrv_data_month = xr.open_dataset(
+                    f"data/satellite-hrv/{year}/{month}.zarr.zip",
+                    engine="zarr", chunks="auto"
                 )
-                del data
-                del times
-                gc.collect()
-            del hrv_data_month
+                start_date = datetime(year, month, 1)
+                end_date = start_date + relativedelta(months=1)
+
+                cur = start_date
+                days_to_get = []
+                while cur != end_date + timedelta(days=1):
+                    days_to_get.append(cur)
+                    cur = cur + timedelta(days=1)
+
+                for date in tqdm.tqdm(days_to_get):
+                    slc = get_day_slice(date, hrv_data_month)
+                    if slc is None:
+                        continue
+                    combined = xr.concat([slc], dim='time')
+                    times = combined['time'].to_numpy()
+                    data = combined['data'].to_numpy()
+                    day = date.day
+                    pathlib.Path(f"data/satellite-hrv/{year}/{month}").mkdir(parents=False, exist_ok=True)
+                    p = pathlib.Path(f'data/satellite-hrv/{year}/{month}/{day}.npz')
+                    if p.exists():
+                        raise ValueError(f'Path {p} already exists!')
+                    print('Saving', p)
+                    np.savez(
+                        p,
+                        times=times,
+                        data=data,
+                    )
+                    del data
+                    del times
+                    gc.collect()
+                del hrv_data_month
 
