@@ -43,11 +43,8 @@ class ChDataset(torch.utils.data.Dataset):
         filter = non_zero.index.get_level_values('timestamp').hour.isin(range(7, 17))
         timestamp = np.random.choice(non_zero.index.get_level_values('timestamp')[filter])
 
-        # Add random noise to timestamp up to 3 hours
-        timestamp = timestamp - pd.Timedelta(hours=np.random.randint(0, 2), minutes=5*np.random.randint(0, 12))
-
-        # Get the data for 5.5 hours (30 min for buffer)
-        data = site_data.loc[timestamp:timestamp + pd.Timedelta(hours=5.5)]
+        # Add random noise to timestamp up to 1 hours
+        timestamp = timestamp - pd.Timedelta(hours=0, minutes=5*np.random.randint(0, 12))
 
         if self.use_hrv:
             # Get the hrv data for the timestamp
@@ -73,12 +70,23 @@ class ChDataset(torch.utils.data.Dataset):
             r = 64
             hrv_data = hrv_data[:, y - r : y + r, x - r : x + r, 0][:12]
 
-            if len(hrv_data) < 12 or len(data) < 60:
+            if len(hrv_data) < 12:
                 if debug:
                     print("Could not create a large enough window", timestamp)
                 return self.__getitem__(index + 1)
+            elif (np.isnan(hrv_data).any()):
+                print("NAN-HRV WARNING")
+                return self.__getitem__(index + 1)
         else:
             hrv_data = None
+
+        # Get the data for 5.5 hours (30 min for buffer)
+        data = site_data.loc[timestamp:timestamp + pd.Timedelta(hours=5.5)]
+
+        if len(data) < 60:
+            if debug:
+                print("Could not create a large enough window", timestamp)
+            return self.__getitem__(index + 1)
 
         # First 1 hour is input, last 4 hours is target
         pv, target = data['power'].iloc[:12].values, data['power'].iloc[12:60].values
