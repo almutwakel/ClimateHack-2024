@@ -11,6 +11,7 @@ import pathlib
 import numpy as np
 import pandas as pd
 import gc
+import zarr
 
 def get_day_slice(date, data):
     data_slice = data.loc[
@@ -61,11 +62,11 @@ if __name__ == "__main__":
     if not os.path.exists("submission"):
         os.makedirs("submission", exist_ok=True)
 
-        os.system("!curl -L https://raw.githubusercontent.com/climatehackai/getting-started-2023/main/submission/competition.py --output submission/competition.py")
-        os.system("!curl -L https://raw.githubusercontent.com/climatehackai/getting-started-2023/main/submission/doxa.yaml --output submission/doxa.yaml")
-        os.system("!curl -L https://raw.githubusercontent.com/climatehackai/getting-started-2023/main/submission/model.py --output submission/model.py")
-        os.system("!curl -L https://raw.githubusercontent.com/climatehackai/getting-started-2023/main/submission/run.py --output submission/run.py")
-        os.system("!curl -L https://raw.githubusercontent.com/climatehackai/getting-started-2023/main/indices.json --output indices.json")
+        os.system("curl -L https://raw.githubusercontent.com/climatehackai/getting-started-2023/main/submission/competition.py --output submission/competition.py")
+        os.system("curl -L https://raw.githubusercontent.com/climatehackai/getting-started-2023/main/submission/doxa.yaml --output submission/doxa.yaml")
+        os.system("curl -L https://raw.githubusercontent.com/climatehackai/getting-started-2023/main/submission/model.py --output submission/model.py")
+        os.system("curl -L https://raw.githubusercontent.com/climatehackai/getting-started-2023/main/submission/run.py --output submission/run.py")
+        os.system("curl -L https://raw.githubusercontent.com/climatehackai/getting-started-2023/main/indices.json --output indices.json")
 
     if not os.path.exists("data"):
         os.makedirs("data/pv/2020", exist_ok=True)
@@ -74,12 +75,12 @@ if __name__ == "__main__":
         os.makedirs("data/satellite-hrv/2021", exist_ok=True)
         os.makedirs("data/weather/2020", exist_ok=True)
         os.makedirs("data/weather/2021", exist_ok=True)
-        os.system("!curl -L https://huggingface.co/datasets/climatehackai/climatehackai-2023/resolve/main/pv/metadata.csv --output data/pv/metadata.csv")
+        os.system("curl -L https://huggingface.co/datasets/climatehackai/climatehackai-2023/resolve/main/pv/metadata.csv --output data/pv/metadata.csv")
         for (year, month) in data_months:
-            os.system('!curl -L "https://huggingface.co/datasets/climatehackai/climatehackai-2023/resolve/main/pv/"$year"/"$month".parquet" --output "data/pv/"$year"/"$month".parquet"')
-            os.system('!curl -L "https://huggingface.co/datasets/climatehackai/climatehackai-2023/resolve/main/satellite-hrv/"$year"/"$month".zarr.zip" --output "data/satellite-hrv/"$year"/"$month".zarr.zip"')
-            os.system('!curl -L "https://huggingface.co/datasets/climatehackai/climatehackai-2023/resolve/main/weather/"$year"/"$month".zarr.zip" --output "data/weather/"$year"/"$month".zarr.zip"')
-        os.system("!cp indices.json data")
+            os.system('curl -L "https://huggingface.co/datasets/climatehackai/climatehackai-2023/resolve/main/pv/"$year"/"$month".parquet" --output "data/pv/"$year"/"$month".parquet"')
+            os.system('curl -L "https://huggingface.co/datasets/climatehackai/climatehackai-2023/resolve/main/satellite-hrv/"$year"/"$month".zarr.zip" --output "data/satellite-hrv/"$year"/"$month".zarr.zip"')
+            os.system('curl -L "https://huggingface.co/datasets/climatehackai/climatehackai-2023/resolve/main/weather/"$year"/"$month".zarr.zip" --output "data/weather/"$year"/"$month".zarr.zip"')
+        os.system("cp indices.json data")
 
     for year in [2020, 2021]:
         for month in range(1, 13):
