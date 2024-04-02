@@ -77,9 +77,9 @@ if __name__ == "__main__":
         os.makedirs("data/weather/2021", exist_ok=True)
         os.system("curl -L https://huggingface.co/datasets/climatehackai/climatehackai-2023/resolve/main/pv/metadata.csv --output data/pv/metadata.csv")
         for (year, month) in data_months:
-            os.system('curl -L "https://huggingface.co/datasets/climatehackai/climatehackai-2023/resolve/main/pv/"$year"/"$month".parquet" --output "data/pv/"$year"/"$month".parquet"')
-            os.system('curl -L "https://huggingface.co/datasets/climatehackai/climatehackai-2023/resolve/main/satellite-hrv/"$year"/"$month".zarr.zip" --output "data/satellite-hrv/"$year"/"$month".zarr.zip"')
-            os.system('curl -L "https://huggingface.co/datasets/climatehackai/climatehackai-2023/resolve/main/weather/"$year"/"$month".zarr.zip" --output "data/weather/"$year"/"$month".zarr.zip"')
+            os.system(f'curl -L "https://huggingface.co/datasets/climatehackai/climatehackai-2023/resolve/main/pv/"{year}"/"{month}".parquet" --output "data/pv/"{year}"/"{month}".parquet"')
+            os.system(f'curl -L "https://huggingface.co/datasets/climatehackai/climatehackai-2023/resolve/main/satellite-hrv/"{year}"/"{month}".zarr.zip" --output "data/satellite-hrv/"{year}"/"{month}".zarr.zip"')
+            os.system(f'curl -L "https://huggingface.co/datasets/climatehackai/climatehackai-2023/resolve/main/weather/"{year}"/"{month}".zarr.zip" --output "data/weather/"{year}"/"{month}".zarr.zip"')
         os.system("cp indices.json data")
 
     for year in [2020, 2021]:
