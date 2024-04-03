@@ -10,10 +10,13 @@ from code.models.attention import AttentionModel
 from code.dataloader import ChDataModule, ChCacheDataset
 from code.train import train_epoch, eval_epoch, train_loop
 
+device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+
 
 if __name__ == "__main__":
 	argparser = argparse.ArgumentParser()
 	argparser.add_argument("--model", type=str, default="multimodal")
+	argparser.add_argument("--name", type=str, default="0")
 	argparser.add_argument("--pretrain", type=bool, default=False)
 	argparser.add_argument("--use_hrv", type=bool, default=True)
 	argparser.add_argument("--use_weather", type=bool, default=False)
@@ -64,6 +67,8 @@ if __name__ == "__main__":
 
 	else:
 		raise ValueError("Invalid model")
+
+	model.to(device)
 	
 	if args.checkpoint is not None:
 		model.load_state_dict(torch.load(args.checkpoint))

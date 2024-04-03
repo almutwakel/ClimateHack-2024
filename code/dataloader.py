@@ -7,6 +7,7 @@ from huggingface_hub import snapshot_download
 import json
 import lightning.pytorch as pl
 import dask
+import random
 
 debug = False
 
@@ -149,6 +150,7 @@ class ChCacheDataset(Dataset):
         if self.cache_dir is not None:
             self.cache_dir = os.path.join(cache_dir, mode)
             os.makedirs(self.cache_dir, exist_ok=True)
+        print(mode, cache_dir)
 
     def __len__(self):
         if self.mode == 'train':
@@ -159,11 +161,13 @@ class ChCacheDataset(Dataset):
     def __getitem__(self, index):
         data_path = os.path.join(self.cache_dir, f"{index}.npz")
         if not os.path.exists(data_path):
-            return self.__getitem__(index + 1)
+            next_index = random.randrange(0, len(self))
+            return self.__getitem__(next_index)
         data = np.load(data_path)
 
         if np.isnan(data['pv']).any() or np.isnan(data['metadata']).any() or np.isnan(data['hrv_data']).any() or np.isnan(data['target']).any():
-            return self.__getitem__(index + 1)
+            next_index = random.randrange(0, len(self))
+            return self.__getitem__(next_index)
 
         return data['pv'], data['metadata'], data['hrv_data'], data['target']
 
@@ -233,8 +237,8 @@ class ChDataModule(pl.LightningDataModule):
 
         self.train_dataset = ChDataset(train_pv, meta_data, site_locations, use_hrv)
         self.val_dataset = ChDataset(val_pv, meta_data, site_locations, use_hrv)
-        self.train_dataset_cached = ChCacheDataset(train_pv, meta_data, site_locations, mode='train', cache_dir='data/cache')
-        self.val_dataset_cached = ChCacheDataset(val_pv, meta_data, site_locations, mode='val', cache_dir='data/cache')
+        self.train_dataset_cached = ChCacheDataset(train_pv, meta_data, site_locations, mode='train', cache_dir='data/cache/')
+        self.val_dataset_cached = ChCacheDataset(val_pv, meta_data, site_locations, mode='val', cache_dir='data/cache/')
 
     def toggle_train_hrv(self):
         self.train_dataset.toggle_hrv()

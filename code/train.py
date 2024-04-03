@@ -3,6 +3,7 @@ import torch
 from torch import nn
 from torch import optim
 import numpy as np
+import os
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
@@ -17,17 +18,17 @@ def train_epoch(model, args, optimiser, criterion, train_loader):
 
         if args.cached_data:
             (pv_features, metadata_features, hrv_data, pv_targets) = d
-            weather_data = np.array([])
+            weather_data = torch.Tensor([])
         elif args.pretrain and not args.use_hrv:
             (pv_features, latitude, longitude, day_of_year, time_of_day,
               orientation, tilt, kwp, pv_targets) = d
-            hrv_data = np.array([])
-            weather_data = np.array([])
+            hrv_data = torch.Tensor([])
+            weather_data = torch.Tensor([])
             metadata_features = torch.stack((latitude, longitude, day_of_year, time_of_day, orientation, tilt, kwp), axis=1)
         else:
             (pv_features, latitude, longitude, day_of_year, time_of_day,
               orientation, tilt, kwp, hrv_data, pv_targets) = d
-            weather_data = np.array([])
+            weather_data = torch.Tensor([])
             metadata_features = torch.stack((latitude, longitude, day_of_year, time_of_day, orientation, tilt, kwp), axis=1)
 
         predictions = model(
@@ -49,8 +50,8 @@ def train_epoch(model, args, optimiser, criterion, train_loader):
 
         loss.backward()
         optimiser.step()
-        # if (i + 1) % (200 // (args.batch_size)) == 0:
-            # print(f"{i+1}: {running_loss / count}")
+        if (i + 1) % (200) == 0:
+            print(f"{i+1}: {running_loss / count}")
 
     print(f"Train Loss: {running_loss / count}")
     return running_loss / count
@@ -63,17 +64,17 @@ def eval_epoch(model, args, criterion, val_loader):
 
         if args.cached_data:
             (pv_features, metadata_features, hrv_data, pv_targets) = d
-            weather_data = np.array([])
+            weather_data = torch.Tensor([])
         elif args.pretrain and not args.use_hrv:
             (pv_features, latitude, longitude, day_of_year, time_of_day,
               orientation, tilt, kwp, pv_targets) = d
-            hrv_data = np.array([])
-            weather_data = np.array([])
+            hrv_data = torch.Tensor([])
+            weather_data = torch.Tensor([])
             metadata_features = torch.stack((latitude, longitude, day_of_year, time_of_day, orientation, tilt, kwp), axis=1)
         else:
             (pv_features, latitude, longitude, day_of_year, time_of_day,
               orientation, tilt, kwp, hrv_data, pv_targets) = d
-            weather_data = np.array([])
+            weather_data = torch.Tensor([])
             metadata_features = torch.stack((latitude, longitude, day_of_year, time_of_day, orientation, tilt, kwp), axis=1)
 
         predictions = model(
@@ -95,6 +96,7 @@ def eval_epoch(model, args, criterion, val_loader):
 def train_loop(model, args, train_loader, val_loader):
     optimiser = optim.AdamW(model.parameters(), lr=args.lr, weight_decay=args.weight_decay)
     criterion = nn.L1Loss()
+    os.makedirs('checkpoints', exist_ok=True)
 
     best_val = float('inf')
 
