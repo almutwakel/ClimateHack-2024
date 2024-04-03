@@ -2,7 +2,7 @@ import pandas as pd
 import torch
 import numpy as np
 import os
-from torch.utils.data import DataLoader
+from torch.utils.data import DataLoader, Dataset
 from huggingface_hub import snapshot_download
 import json
 import lightning.pytorch as pl
@@ -11,7 +11,7 @@ import dask
 debug = False
 
 
-class ChDataset(torch.utils.data.Dataset):
+class ChDataset(Dataset):
     def __init__(self, pv_data, meta_data, site_locs, use_hrv=False):
         self.pv_data = pv_data.groupby([pd.Grouper(level='ss_id')])
         self.ss_ids = list(self.pv_data.groups.keys())
@@ -75,7 +75,8 @@ class ChDataset(torch.utils.data.Dataset):
                     print("Could not create a large enough window", timestamp)
                 return self.__getitem__(index + 1)
             elif (np.isnan(hrv_data).any()):
-                print("NAN-HRV WARNING")
+                if debug:
+                    print("NAN-HRV WARNING")
                 return self.__getitem__(index + 1)
         else:
             hrv_data = None
@@ -137,6 +138,36 @@ def collate_fn(batch):
         )
 
 
+class ChCacheDataset(Dataset):
+    def __init__(self, pv_data, meta_data, site_locs, mode='train', cache_dir=None):
+        self.pv_data = pv_data.groupby([pd.Grouper(level='ss_id')])
+        self.ss_ids = list(self.pv_data.groups.keys())
+        self.meta_data = meta_data
+        self.site_locs = site_locs
+        self.cache_dir = cache_dir
+        self.mode = mode
+        if self.cache_dir is not None:
+            self.cache_dir = os.path.join(cache_dir, mode)
+            os.makedirs(self.cache_dir, exist_ok=True)
+
+    def __len__(self):
+        if self.mode == 'train':
+            return len(self.ss_ids) * 500
+        else:
+            return len(self.ss_ids) * 10
+
+    def __getitem__(self, index):
+        data_path = os.path.join(self.cache_dir, f"{index}.npz")
+        if not os.path.exists(data_path):
+            return self.__getitem__(index + 1)
+        data = np.load(data_path)
+
+        if np.isnan(data['pv']).any() or np.isnan(data['metadata']).any() or np.isnan(data['hrv_data']).any() or np.isnan(data['target']).any():
+            return self.__getitem__(index + 1)
+
+        return data['pv'], data['metadata'], data['hrv_data'], data['target']
+
+
 class ChDataModule(pl.LightningDataModule):
     def __init__(self, datamodule_cfg, dataloader_cfg):
         super().__init__()
@@ -144,6 +175,7 @@ class ChDataModule(pl.LightningDataModule):
         self.dataloader_cfg = dataloader_cfg
 
     def setup(self, stage):
+
         snapshot_download(repo_id="climatehackai/climatehackai-2023", allow_patterns=["pv*"], repo_type="dataset", local_dir="data")
         # Load data
         if not os.path.exists("data/pv/all.parquet"):
@@ -201,6 +233,8 @@ class ChDataModule(pl.LightningDataModule):
 
         self.train_dataset = ChDataset(train_pv, meta_data, site_locations, use_hrv)
         self.val_dataset = ChDataset(val_pv, meta_data, site_locations, use_hrv)
+        self.train_dataset_cached = ChCacheDataset(train_pv, meta_data, site_locations, mode='train', cache_dir='data/cache')
+        self.val_dataset_cached = ChCacheDataset(val_pv, meta_data, site_locations, mode='val', cache_dir='data/cache')
 
     def toggle_train_hrv(self):
         self.train_dataset.toggle_hrv()
@@ -213,3 +247,9 @@ class ChDataModule(pl.LightningDataModule):
 
     def val_dataloader(self):
         return DataLoader(self.val_dataset, **self.dataloader_cfg, shuffle=False, collate_fn=collate_fn)
+
+    def train_dataloader_cached(self):
+        return DataLoader(self.train_dataset_cached, **self.dataloader_cfg, shuffle=True)
+
+    def val_dataloader_cached(self):
+        return DataLoader(self.val_dataset_cached, **self.dataloader_cfg, shuffle=False)

@@ -1,6 +1,8 @@
+import time
 import torch
 from torch import nn
 from torch import optim
+import numpy as np
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
@@ -13,23 +15,25 @@ def train_epoch(model, args, optimiser, criterion, train_loader):
 
         optimiser.zero_grad()
 
-        if args.pretrain:
+        if args.cached_data:
+            (pv_features, metadata_features, hrv_data, pv_targets) = d
+            weather_data = np.array([])
+        elif args.pretrain and not args.use_hrv:
             (pv_features, latitude, longitude, day_of_year, time_of_day,
               orientation, tilt, kwp, pv_targets) = d
-            hrv_data = None
-            weather_data = None
+            hrv_data = np.array([])
+            weather_data = np.array([])
+            metadata_features = torch.stack((latitude, longitude, day_of_year, time_of_day, orientation, tilt, kwp), axis=1)
         else:
             (pv_features, latitude, longitude, day_of_year, time_of_day,
               orientation, tilt, kwp, hrv_data, pv_targets) = d
-            weather_data = None
-            hrv_data = hrv_data.to(device, dtype=torch.float)
+            weather_data = np.array([])
+            metadata_features = torch.stack((latitude, longitude, day_of_year, time_of_day, orientation, tilt, kwp), axis=1)
 
-
-        metadata_features = torch.stack((latitude, longitude, day_of_year, time_of_day, orientation, tilt, kwp), axis=1)
         predictions = model(
             pv_features.to(device, dtype=torch.float),
-            hrv_data,
-            weather_data,
+            hrv_data.to(device, dtype=torch.float),
+            weather_data.to(device, dtype=torch.float),
             metadata_features.to(device, dtype=torch.float)
         )
 
@@ -45,8 +49,8 @@ def train_epoch(model, args, optimiser, criterion, train_loader):
 
         loss.backward()
         optimiser.step()
-        if (i + 1) % (200 // (args.batch_size)) == 0:
-            print(f"{i+1}: {running_loss / count}")
+        # if (i + 1) % (200 // (args.batch_size)) == 0:
+            # print(f"{i+1}: {running_loss / count}")
 
     print(f"Train Loss: {running_loss / count}")
     return running_loss / count
@@ -57,22 +61,25 @@ def eval_epoch(model, args, criterion, val_loader):
     count = 0
     for i, d in enumerate(val_loader):
 
-        if args.pretrain:
+        if args.cached_data:
+            (pv_features, metadata_features, hrv_data, pv_targets) = d
+            weather_data = np.array([])
+        elif args.pretrain and not args.use_hrv:
             (pv_features, latitude, longitude, day_of_year, time_of_day,
               orientation, tilt, kwp, pv_targets) = d
-            hrv_data = None
-            weather_data = None
+            hrv_data = np.array([])
+            weather_data = np.array([])
+            metadata_features = torch.stack((latitude, longitude, day_of_year, time_of_day, orientation, tilt, kwp), axis=1)
         else:
             (pv_features, latitude, longitude, day_of_year, time_of_day,
               orientation, tilt, kwp, hrv_data, pv_targets) = d
-            weather_data = None
-            hrv_data = hrv_data.to(device, dtype=torch.float)
+            weather_data = np.array([])
+            metadata_features = torch.stack((latitude, longitude, day_of_year, time_of_day, orientation, tilt, kwp), axis=1)
 
-        metadata_features = torch.stack((latitude, longitude, day_of_year, time_of_day, orientation, tilt, kwp), axis=1)
         predictions = model(
             pv_features.to(device, dtype=torch.float),
-            hrv_data,
-            weather_data,
+            hrv_data.to(device, dtype=torch.float),
+            weather_data.to(device, dtype=torch.float),
             metadata_features.to(device, dtype=torch.float)
         )
 
@@ -92,15 +99,17 @@ def train_loop(model, args, train_loader, val_loader):
     best_val = float('inf')
 
     for epoch in range(args.epochs):
+        t0 = time.time()
         print("Epoch", epoch + 1)
         train_loss = train_epoch(model, args, optimiser, criterion, train_loader)
         val_loss = eval_epoch(model, args, criterion, val_loader)
 
-        print("Train Loss:", train_loss, "Val Loss:", val_loss, "LR:", optimiser.param_groups[0]['lr'])
+        t1 = time.time()
+        print("Train Loss:", train_loss, "Val Loss:", val_loss, "LR:", optimiser.param_groups[0]['lr'], "Time:", t1-t0)
 
-        torch.save(model.state_dict(), f"checkpoints/checkpoint_epoch{epoch}.pt")
+        torch.save(model.state_dict(), f"checkpoints/checkpoint_{args.name}_epoch{epoch}.pt")
         if val_loss < best_val:
             print("Saving new best")
             best_val = val_loss
-            torch.save(model.state_dict(), f"checkpoints/checkpoint_best.pt")
+            torch.save(model.state_dict(), f"checkpoints/checkpoint_{args.name}_best.pt")
         print("")
