@@ -161,3 +161,9 @@ cython_debug/
 
 # mac
 .DS_STORE
+
+# dataset
+data/*
+
+# model saves
+checkpoints/*
